@@ -1,7 +1,7 @@
 {
   "AWSEBDockerrunVersion": "1",
   "Image": {
-    "Name": "mephisto2120/tut-spring-kafka-producer",
+    "Name": "mephisto2120/tut-spring-kafka-streams-travis-credits",
     "Update": "true"
   },
   "Ports": [

@@ -46,7 +46,7 @@ dependencies {
 
 group = 'com.tryton.tut'
 version = '0.0.1-SNAPSHOT'
-description = 'tut-spring-kafka-producer'
+description = 'tut-spring-kafka-streams-travis-credits'
 java.sourceCompatibility = JavaVersion.VERSION_11
 
 publishing {

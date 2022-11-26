@@ -1,16 +1,13 @@
 package com.tryton.tut.tut_spring_kafka_streams_travis_credits.config;
 
-import com.launchdarkly.eventsource.EventHandler;
-import com.launchdarkly.eventsource.EventSource;
-import com.tryton.tut.tut_spring_kafka_streams_travis_credits.service.WikimediaChangeHandler;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.core.KafkaTemplate;
 
-import java.net.URI;
 import java.util.Properties;
 
 @Configuration
@@ -41,15 +38,7 @@ public class KafkaProducerConfig {
 	}
 
 	@Bean
-	public EventHandler eventHandler() {
-		String topic = "wikimedia.recentchange";
-		return new WikimediaChangeHandler(topic, kafkaProducer());
-	}
-
-	@Bean
-	public EventSource eventSource() {
-		String url = "https://stream.wikimedia.org/v2/stream/recentchange";
-		EventSource.Builder builder = new EventSource.Builder(eventHandler(), URI.create(url));
-		return builder.build();
+	public KafkaTemplate kafkaTemplate() {
+		return new KafkaTemplate(() -> kafkaProducer());
 	}
 }
