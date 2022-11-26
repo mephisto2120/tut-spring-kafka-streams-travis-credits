@@ -13,9 +13,13 @@ import org.apache.kafka.connect.json.JsonDeserializer;
 import org.apache.kafka.connect.json.JsonSerializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.kstream.Consumed;
+import org.apache.kafka.streams.kstream.Grouped;
+import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.KTable;
+import org.apache.kafka.streams.kstream.Materialized;
+import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.state.KeyValueStore;
-import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 import java.util.Properties;
@@ -35,29 +39,30 @@ public class CreditBalanceService {
 
 		StreamsBuilder builder = new StreamsBuilder();
 
-		KStream<String, JsonNode> bankTransactions = builder.stream(TRAVIS_CREDITS_TOPIC,
+		KStream<String, JsonNode> travisCredits = builder.stream(TRAVIS_CREDITS_TOPIC,
 				Consumed.with(Serdes.String(), jsonSerde));
 
 
 		// create the initial json object for balances
 		ObjectNode initialBalance = JsonNodeFactory.instance.objectNode();
 		initialBalance.put("count", 0);
+		initialBalance.put("uuid", "");
 		initialBalance.put("balance", 0);
 		initialBalance.put("time", Instant.ofEpochMilli(0L).toString());
 
-		KTable<String, JsonNode> bankBalance = bankTransactions
-				.groupByKey(Serialized.with(Serdes.String(), jsonSerde))
+		KTable<String, JsonNode> bankBalance = travisCredits
+				.groupByKey(Grouped.with(Serdes.String(), jsonSerde))
 				.aggregate(
 						() -> initialBalance,
 						(key, transaction, balance) -> newBalance(transaction, balance),
-						Materialized.<String, JsonNode, KeyValueStore<Bytes, byte[]>>as("travis-credits-agg")
+						Materialized.<String, JsonNode, KeyValueStore<Bytes, byte[]>>as("travis-credits-agg-inter")
 								.withKeySerde(Serdes.String())
 								.withValueSerde(jsonSerde)
 				);
 
-		bankBalance.toStream().to("travis-credits-exactly-once", Produced.with(Serdes.String(), jsonSerde));
+		bankBalance.toStream().to("travis-credits-aggregated", Produced.with(Serdes.String(), jsonSerde));
 
-		KafkaStreams streams = new KafkaStreams(builder.build(), config);
+		streams = new KafkaStreams(builder.build(), config);
 		streams.cleanUp();
 		streams.start();
 
@@ -75,6 +80,7 @@ public class CreditBalanceService {
 		Long transactionEpoch = Instant.parse(transaction.get("time").asText()).toEpochMilli();
 		Instant newBalanceInstant = Instant.ofEpochMilli(Math.max(balanceEpoch, transactionEpoch));
 		newBalance.put("time", newBalanceInstant.toString());
+		newBalance.put("uuid", transaction.get("uuid").asText());
 		return newBalance;
 	}
 
