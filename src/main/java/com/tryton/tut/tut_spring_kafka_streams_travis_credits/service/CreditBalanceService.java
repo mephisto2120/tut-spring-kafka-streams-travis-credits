@@ -9,12 +9,14 @@ import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.utils.Bytes;
-import org.apache.kafka.connect.json.JsonDeserializer;
-import org.apache.kafka.connect.json.JsonSerializer;
+//import org.apache.kafka.connect.json.JsonDeserializer;
+//import org.apache.kafka.connect.json.JsonSerializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -35,7 +37,7 @@ public class CreditBalanceService {
 
 		StreamsBuilder builder = new StreamsBuilder();
 
-		KStream<String, JsonNode> bankTransactions = builder.stream(TRAVIS_CREDITS_TOPIC,
+		KStream<String, JsonNode> travisCredits = builder.stream(TRAVIS_CREDITS_TOPIC,
 				Consumed.with(Serdes.String(), jsonSerde));
 
 
@@ -45,8 +47,9 @@ public class CreditBalanceService {
 		initialBalance.put("balance", 0);
 		initialBalance.put("time", Instant.ofEpochMilli(0L).toString());
 
-		KTable<String, JsonNode> bankBalance = bankTransactions
-				.groupByKey(Serialized.with(Serdes.String(), jsonSerde))
+		KTable<String, JsonNode> bankBalance = travisCredits
+				//.groupByKey(Serialized.with(Serdes.String(), jsonSerde))
+				.groupByKey(Grouped.with(Serdes.String(), jsonSerde))
 				.aggregate(
 						() -> initialBalance,
 						(key, transaction, balance) -> newBalance(transaction, balance),
@@ -57,7 +60,7 @@ public class CreditBalanceService {
 
 		bankBalance.toStream().to("travis-credits-exactly-once", Produced.with(Serdes.String(), jsonSerde));
 
-		KafkaStreams streams = new KafkaStreams(builder.build(), config);
+		streams = new KafkaStreams(builder.build(), config);
 		streams.cleanUp();
 		streams.start();
 

@@ -15,16 +15,13 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.*;
 import org.apache.kafka.streams.state.KeyValueStore;
 import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
 import java.time.Instant;
 import java.util.Properties;
 
-@SpringBootApplication
-public class Launcher {
-
+public class AlternativeLauncher {
     private static final String TRAVIS_CREDITS_TOPIC = "travis-credits";
 
     public static void main(String[] args) {
@@ -98,5 +95,4 @@ public class Launcher {
         newBalance.put("time", newBalanceInstant.toString());
         return newBalance;
     }
-
 }
