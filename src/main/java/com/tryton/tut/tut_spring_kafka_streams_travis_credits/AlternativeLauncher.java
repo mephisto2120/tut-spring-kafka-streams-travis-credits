@@ -9,20 +9,25 @@ import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.utils.Bytes;
+import org.apache.kafka.connect.json.JsonDeserializer;
+import org.apache.kafka.connect.json.JsonSerializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.kstream.*;
+import org.apache.kafka.streams.kstream.Consumed;
+import org.apache.kafka.streams.kstream.Grouped;
+import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.KTable;
+import org.apache.kafka.streams.kstream.Materialized;
+import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.state.KeyValueStore;
-import org.springframework.boot.SpringApplication;
-import org.springframework.kafka.support.serializer.JsonDeserializer;
-import org.springframework.kafka.support.serializer.JsonSerializer;
+
 
 import java.time.Instant;
 import java.util.Properties;
 
 public class AlternativeLauncher {
-    private static final String TRAVIS_CREDITS_TOPIC = "travis-credits";
+    private static final String TRAVIS_CREDITS_TOPIC = "travis-credits-std";
 
     public static void main(String[] args) {
         Properties config = streamConfigProperties();
@@ -39,6 +44,7 @@ public class AlternativeLauncher {
 
         // create the initial json object for balances
         ObjectNode initialBalance = JsonNodeFactory.instance.objectNode();
+        initialBalance.put("uuid", "");
         initialBalance.put("count", 0);
         initialBalance.put("balance", 0);
         initialBalance.put("time", Instant.ofEpochMilli(0L).toString());
@@ -49,12 +55,12 @@ public class AlternativeLauncher {
                 .aggregate(
                         () -> initialBalance,
                         (key, transaction, balance) -> newBalance(transaction, balance),
-                        Materialized.<String, JsonNode, KeyValueStore<Bytes, byte[]>>as("travis-credits-agg")
+                        Materialized.<String, JsonNode, KeyValueStore<Bytes, byte[]>>as("travis-credits-agg-std")
                                 .withKeySerde(Serdes.String())
                                 .withValueSerde(jsonSerde)
                 );
 
-        bankBalance.toStream().to("travis-credits-exactly-once", Produced.with(Serdes.String(), jsonSerde));
+        bankBalance.toStream().to("travis-credits-aggregated-std", Produced.with(Serdes.String(), jsonSerde));
 
         KafkaStreams streams = new KafkaStreams(builder.build(), config);
         streams.cleanUp();
@@ -70,7 +76,7 @@ public class AlternativeLauncher {
     private static Properties streamConfigProperties() {
         Properties config = new Properties();
 
-        config.put(StreamsConfig.APPLICATION_ID_CONFIG, "travis-credit-balance-application");
+        config.put(StreamsConfig.APPLICATION_ID_CONFIG, "travis-credit-balance-application-std");
         config.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "127.0.0.1:9092");
         config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
 
@@ -93,6 +99,7 @@ public class AlternativeLauncher {
         Long transactionEpoch = Instant.parse(transaction.get("time").asText()).toEpochMilli();
         Instant newBalanceInstant = Instant.ofEpochMilli(Math.max(balanceEpoch, transactionEpoch));
         newBalance.put("time", newBalanceInstant.toString());
+        newBalance.put("uuid", transaction.get("uuid").asText());
         return newBalance;
     }
 }
