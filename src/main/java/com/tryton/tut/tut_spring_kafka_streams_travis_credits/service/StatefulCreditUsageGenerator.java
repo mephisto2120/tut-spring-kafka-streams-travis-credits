@@ -4,50 +4,49 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.apachecommons.CommonsLog;
-import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.stereotype.Service;
+import org.apache.kafka.clients.producer.KafkaProducer;
+import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerRecord;
 
 import java.time.Instant;
-import java.util.AbstractMap;
-import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ThreadLocalRandom;
 
-@Service
 @RequiredArgsConstructor
 @CommonsLog
 public class StatefulCreditUsageGenerator {
 
 	private static final String TRAVIS_CREDITS_TOPIC = "travis-credits";
 
-	private final KafkaTemplate kafkaTemplate;
+	private final Properties config;
+	private Producer<String, String> producer;
 	private boolean enabled = false;
 
 	public void start() {
 		enabled = true;
-
+		producer = new KafkaProducer<>(config);
 		int i = 0;
-
 		while (enabled) {
 			log.info(String.format("Producing batch: %d", i));
 			try {
-
-				Map.Entry<String, String> entryUsage1 = newRandomCreditUsage("111");
-				kafkaTemplate.send(TRAVIS_CREDITS_TOPIC, entryUsage1.getKey(), entryUsage1.getValue());
+				producer.send(newRandomCreditUsage("boris-123"));
 				Thread.sleep(100);
-				Map.Entry<String, String> entryUsage2 = newRandomCreditUsage("222");
-				kafkaTemplate.send(TRAVIS_CREDITS_TOPIC, entryUsage2.getKey(), entryUsage2.getValue());
+				producer.send(newRandomCreditUsage("anatolij-456"));
 				Thread.sleep(100);
-				Map.Entry<String, String> entryUsage3 = newRandomCreditUsage("333");
-				kafkaTemplate.send(TRAVIS_CREDITS_TOPIC, entryUsage3.getKey(), entryUsage3.getValue());
+				producer.send(newRandomCreditUsage("garri-789"));
 				Thread.sleep(100);
 				i += 1;
 			} catch (InterruptedException e) {
 				break;
 			}
 		}
+		if (!enabled) {
+			producer.close();
+			log.info("Producer has been closed");
+		}
 	}
 
-	public static Map.Entry<String, String> newRandomCreditUsage(String uuid) {
+	private static ProducerRecord<String, String> newRandomCreditUsage(String uuid) {
 		// creates an empty json {}
 		ObjectNode creditUsage = JsonNodeFactory.instance.objectNode();
 
@@ -61,7 +60,7 @@ public class StatefulCreditUsageGenerator {
 		creditUsage.put("uuid", uuid);
 		creditUsage.put("amount", amount);
 		creditUsage.put("time", now.toString());
-		return new AbstractMap.SimpleImmutableEntry<>(uuid, creditUsage.toString());
+		return new ProducerRecord<>(TRAVIS_CREDITS_TOPIC, uuid, creditUsage.toString());
 	}
 
 	public void stop() {

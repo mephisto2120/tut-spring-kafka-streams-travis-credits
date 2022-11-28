@@ -1,7 +1,6 @@
 package com.tryton.tut.tut_spring_kafka_streams_travis_credits.controller;
 
 import com.tryton.tut.tut_spring_kafka_streams_travis_credits.service.CreditBalanceService;
-import com.tryton.tut.tut_spring_kafka_streams_travis_credits.service.StatefulCreditUsageGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
