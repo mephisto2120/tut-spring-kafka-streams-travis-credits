@@ -1,6 +1,7 @@
 package com.tryton.tut.tut_spring_kafka_streams_travis_credits.config;
 
 import com.tryton.tut.tut_spring_kafka_streams_travis_credits.service.StatefulCreditUsageGenerator;
+import lombok.RequiredArgsConstructor;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.context.annotation.Bean;
@@ -8,16 +9,16 @@ import org.springframework.context.annotation.Configuration;
 
 import java.util.Properties;
 
+@RequiredArgsConstructor
 @Configuration
 public class KafkaProducerConfig {
 
+	private final KafkaProperties kafkaProperties;
 	@Bean
 	public Properties kafkaProducerProperties() {
-		String bootstrapServers = "127.0.0.1:9092";
-
 		// create Producer Properties
 		Properties properties = new Properties();
-		properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+		properties.setProperty(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaProperties.getBootstrapServers());
 		properties.setProperty(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 		properties.setProperty(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class.getName());
 
@@ -36,6 +37,6 @@ public class KafkaProducerConfig {
 
 	@Bean
 	public StatefulCreditUsageGenerator statefulCreditUsageGenerator() {
-		return new StatefulCreditUsageGenerator(kafkaProducerProperties());
+		return new StatefulCreditUsageGenerator(kafkaProperties, kafkaProducerProperties());
 	}
 }
