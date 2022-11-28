@@ -50,6 +50,15 @@ version = '0.0.1-SNAPSHOT'
 description = 'tut-spring-kafka-streams-travis-credits'
 java.sourceCompatibility = JavaVersion.VERSION_11
 
+task copyWithoutSnapshotInName(type: Copy) {
+    from "$buildDir/libs"
+    into "$buildDir/libs"
+    rename { filename ->
+        System.out.println "$buildDir/libs"
+        filename.replace "-$version", ''
+    }
+}
+
 publishing {
     publications {
         maven(MavenPublication) {
